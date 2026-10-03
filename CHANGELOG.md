@@ -19,6 +19,9 @@ notes (see [docs/releasing.md](docs/releasing.md)).
 
 ### Changed
 
+- jansson is now built from source and linked statically, so building hax no longer needs it
+  installed and the binary no longer depends on it at runtime. Meson fetches it on first setup;
+  pass `-Dforce_fallback_for=` to link the system library instead.
 - After a pause or interruption, "enter to continue" now appears as a placeholder in the prompt
   instead of a separate hint line, and continuing leaves no empty prompt behind.
 - Prompt history (Up, Ctrl-R) is scoped to the working directory like sessions: each directory

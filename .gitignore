@@ -10,3 +10,8 @@ __pycache__/
 
 # clang static-analyzer output
 *.plist
+
+# Sources meson downloads for subprojects/*.wrap
+/subprojects/*/
+/subprojects/packagecache/
+/subprojects/.wraplock

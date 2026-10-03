@@ -147,8 +147,9 @@ lint_sources() {
     setup_build_dir quiet
     run_captured env NINJA_STATUS='HAX_NINJA_STATUS ' ninja -C "$BUILD_DIR" build.ninja
     drop_captured
+    # The compile database also covers vendored subprojects, which are not ours to lint.
     run_clang_tidy_captured "$run_clang_tidy" -clang-tidy-binary "$clang_tidy" -quiet \
-        -p "$BUILD_DIR"
+        -p "$BUILD_DIR" "^$(pwd -P)/(src|tests)/"
     drop_captured
     printf '%s\n' 'lint OK'
 }

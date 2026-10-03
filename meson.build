@@ -5,6 +5,9 @@ project('hax', 'c',
         'c_std=c11',
         'warning_level=3',
         'buildtype=debugoptimized',
+        # Build jansson from subprojects/jansson.wrap rather than linking the
+        # system copy; see the dependency() call below.
+        'force_fallback_for=jansson',
     ],
 )
 
@@ -39,8 +42,18 @@ add_project_arguments(
 # clang-tidy does not report findings inside third-party headers (Homebrew
 # installs them outside the default system include path).
 libcurl = dependency('libcurl', include_type: 'system')
-# >=2.13 for json_object_update_recursive.
-jansson = dependency('jansson', version: '>=2.13', include_type: 'system')
+# >=2.13 for json_object_update_recursive. Compiled from the WrapDB source and
+# linked statically, so the binary carries no runtime jansson dependency and
+# every platform gets the same version. Packagers who want the system library
+# can pass -Dforce_fallback_for= to undo the project default.
+#
+# include_type does not reach a subproject fallback's include dirs, so as_system()
+# marks them explicitly; partial_dependency() drops that mark again in hax_dep.
+jansson = dependency('jansson',
+    version: '>=2.13',
+    # Our warning_level=3 would otherwise apply to jansson's sources too.
+    default_options: ['default_library=static', 'warning_level=0'],
+).as_system('system')
 threads = dependency('threads')
 
 # FreeBSD resolves isfinite() to a libm symbol rather than a compiler builtin,
@@ -235,7 +248,7 @@ hax_dep = declare_dependency(
     link_with: hax_lib,
     dependencies: [
         libcurl.partial_dependency(compile_args: true, includes: true),
-        jansson.partial_dependency(compile_args: true, includes: true),
+        jansson.partial_dependency(compile_args: true, includes: true).as_system('system'),
         threads.partial_dependency(compile_args: true, includes: true),
     ],
 )

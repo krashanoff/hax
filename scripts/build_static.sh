@@ -94,7 +94,7 @@ scripts/install_deps.sh ci >/dev/null
 # present as a static archive (c-ares ships its .a in the dev package). git is for the
 # version stamp.
 as_root apk add --no-cache -q \
-    git curl-static jansson-static \
+    git curl-static \
     brotli-static c-ares-dev libidn2-static libpsl-static libunistring-static \
     nghttp2-static openssl-libs-static zlib-static zstd-static
 printf '%s\n' 'deps OK'

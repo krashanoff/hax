@@ -68,8 +68,9 @@ make install              # optional; may prompt for sudo
 ```
 
 `scripts/install_deps.sh` installs the build dependencies — a C compiler, `libcurl`,
-`jansson`, `meson`, `ninja`, and `pkg-config` — plus `fzf`, which hax uses for `@file`
-completion when available. On other platforms, install those packages by hand and run `make`.
+`meson`, `ninja`, and `pkg-config` — plus `fzf`, which hax uses for `@file` completion when
+available. Meson downloads jansson on first setup and links it statically. On other platforms,
+install those packages by hand and run `make`.
 
 For hacking on hax, `make symlink` links the freshly built binary into `~/.local/bin` so it
 stays on `PATH` across rebuilds. `make tests` additionally needs `tmux`, which drives the

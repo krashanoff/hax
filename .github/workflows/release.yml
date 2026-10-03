@@ -63,12 +63,13 @@ jobs:
           grep -Fq "version: '${GITHUB_REF_NAME#v}'," meson.build
       - name: Install dependencies
         run: scripts/install_deps.sh ci
-      # `meson dist` archives the sources, then builds and runs the test suite
-      # against the unpacked tarball — the artifact is validated as shipped.
+      # `meson dist` archives the sources, including the vendored jansson so the
+      # tarball builds offline, then builds and runs the test suite against the
+      # unpacked tarball — the artifact is validated as shipped.
       - name: Build and test source tarball
         run: |
           meson setup build
-          meson dist -C build
+          meson dist -C build --include-subprojects
       - uses: actions/download-artifact@v8
         with:
           path: artifacts

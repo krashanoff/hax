@@ -65,6 +65,8 @@ CheckOptions:
   # declares their symbols in internals, which would flag the public include
   # as unused. musl is a build/test platform, not a lint one: it redefines
   # NULL in every public header, making attribution there include-order noise.
+  # The vendored jansson's generated jansson_config.h defines json_int_t as a
+  # macro; jansson.h is its public header.
   misc-include-cleaner.IgnoreHeaders: >
     bits/.*;
     asm-generic/.*;
@@ -77,4 +79,5 @@ CheckOptions:
     sys/(errno|fcntl|signal|unistd|dirent|ttycom)\.h;
     (^|/)strings\.h$;
     sys/types\.h$;
-    sys/file\.h$
+    sys/file\.h$;
+    jansson_config\.h$

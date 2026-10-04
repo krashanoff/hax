@@ -8,6 +8,7 @@
 #include "agent_core.h"
 #include "config.h"
 #include "provider.h"
+#include "version.h"
 #include "xalloc.h"
 #include "terminal/ansi.h"
 #include "terminal/theme.h"
@@ -97,7 +98,11 @@ void banner_identity(FILE *out, const struct provider *provider,
 {
     struct banner_writer w;
     banner_open(&w, out);
-    banner_put(&w, "", ANSI_BOLD, ANSI_BOLD_OFF, "hax");
+
+    char *verstr = xasprintf("hax %s", HAX_VERSION);
+    banner_put(&w, "", ANSI_BOLD, ANSI_BOLD_OFF, verstr);
+    free(verstr);
+
     /* A preset may change the system prompt, so its stance must remain visible. */
     const char *preset = config_str("preset");
     if (preset && *preset) {

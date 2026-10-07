@@ -9,6 +9,7 @@
 
 #include "config.h"
 #include "terminal/ansi.h"
+#include "text/utf8.h"
 
 enum notify_method {
     NOTIFY_METHOD_DISABLED,
@@ -58,17 +59,60 @@ static enum notify_method select_notify_method(void)
     return terminal_supports_osc9() ? NOTIFY_METHOD_OSC9 : NOTIFY_METHOD_BEL;
 }
 
-static void emit_osc9_notification(void)
+#define NOTIFY_MESSAGE_MAX_BYTES 240
+
+/* OSC strings must not contain controls: model output is untrusted terminal input. */
+static int emit_message(const char *message)
+{
+    if (!message || !*message)
+        return 0;
+
+    size_t length = strlen(message);
+    size_t offset = 0;
+    size_t written = 0;
+    int pending_space = 0;
+    while (offset < length && written < NOTIFY_MESSAGE_MAX_BYTES) {
+        unsigned char byte = (unsigned char)message[offset];
+        if (byte < 0x20 || byte == 0x7f) {
+            pending_space |= written > 0;
+            offset++;
+            continue;
+        }
+
+        size_t sequence_len = utf8_sequence_length(byte);
+        if (sequence_len > length - offset ||
+            !utf8_sequence_is_valid(message + offset, sequence_len)) {
+            offset++;
+            continue;
+        }
+        if (written + (pending_space ? 1 : 0) + sequence_len > NOTIFY_MESSAGE_MAX_BYTES)
+            break;
+        if (pending_space) {
+            fputc(' ', stdout);
+            written++;
+            pending_space = 0;
+        }
+        fwrite(message + offset, 1, sequence_len, stdout);
+        written += sequence_len;
+        offset += sequence_len;
+    }
+    return written > 0;
+}
+
+static void emit_osc9_notification(const char *message)
 {
     int tmux_wrap = getenv("TMUX") != NULL;
     if (tmux_wrap)
         fputs(ANSI_TMUX_PASSTHROUGH_BEGIN, stdout);
-    fputs(ANSI_ESC "]9;hax: ready" ANSI_BEL, stdout);
+    fputs(ANSI_ESC "]9;hax:", stdout);
+    if (!emit_message(message))
+        fputs(" ready", stdout);
+    fputs(ANSI_BEL, stdout);
     if (tmux_wrap)
         fputs(ANSI_TMUX_PASSTHROUGH_END, stdout);
 }
 
-void notify_attention(void)
+void notify_attention(const char *message)
 {
     enum notify_method method = select_notify_method();
 
@@ -79,7 +123,7 @@ void notify_attention(void)
         fputs(ANSI_BEL, stdout);
         break;
     case NOTIFY_METHOD_OSC9:
-        emit_osc9_notification();
+        emit_osc9_notification(message);
         break;
     }
     fflush(stdout);

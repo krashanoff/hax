@@ -1058,6 +1058,28 @@ static int handle_slash_input(struct input *input, struct agent_state *state, co
     return 1;
 }
 
+static char *notification_message(const struct agent_session *session,
+                                  const struct agent_loop_result *result)
+{
+    const char *content = config_str("notify_content");
+    if (!content || strcmp(content, "last_response") != 0)
+        return NULL;
+
+    size_t from = result->final_items_from;
+    size_t to = result->final_items_to;
+    if (from > session->n_items)
+        return NULL;
+    if (to > session->n_items)
+        to = session->n_items;
+
+    for (size_t i = to; i-- > from;) {
+        const struct item *item = &session->items[i];
+        if (item->kind == ITEM_ASSISTANT_MESSAGE && item->text && *item->text)
+            return xstrdup(item->text);
+    }
+    return NULL;
+}
+
 static void set_resume_state(struct agent_state *state, const struct agent_loop_result *result)
 {
     switch (result->outcome) {
@@ -1308,6 +1330,7 @@ int agent_run(struct provider **provider_io, const struct hax_opts *options)
         user_turn_context_tokens = loop_result.last_context_tokens;
         user_turn_errored = loop_result.outcome == AGENT_LOOP_PROVIDER_ERROR;
         int user_turn_complete = loop_result.outcome == AGENT_LOOP_COMPLETE;
+        char *notify_message = notification_message(&session, &loop_result);
         set_resume_state(&state, &loop_result);
         agent_loop_result_destroy(&loop_result);
         interrupt_disarm();
@@ -1345,7 +1368,8 @@ int agent_run(struct provider **provider_io, const struct hax_opts *options)
         /* Esc means the user is already present; otherwise notify when the REPL becomes idle,
          * including errors and max-turn pauses. */
         if (!user_pressed_escape)
-            notify_attention();
+            notify_attention(notify_message);
+        free(notify_message);
     }
 
     finalize_tasks(&state);

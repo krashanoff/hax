@@ -71,6 +71,10 @@ static const struct config_setting REGISTRY[] = {
      .description = "Desktop-notification style: auto, bel, osc9, off "
                     "(auto detects from the terminal)",
      .choices = "auto|bel|osc9|off", .editable = 1},
+    {.key = "notify_content", .env_var = "HAX_NOTIFY_CONTENT", .default_value = "last_response",
+     .description = "Notification content: last_response uses the final model response; ready "
+                    "uses a generic status",
+     .choices = "last_response|ready", .editable = 1},
     {.key = "theme", .env_var = "HAX_THEME", .default_value = "auto",
      .description = "Color theme: auto, dark, light, ansi, off (auto detects from the terminal)",
      .choices = "auto|dark|light|ansi|off", .editable = 1},

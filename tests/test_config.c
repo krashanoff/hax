@@ -92,6 +92,8 @@ static void test_registry_default(void)
 {
     clear_env();
     config_load(NULL);
+    /* Registry defaults apply to display settings too. */
+    EXPECT_STR_EQ(config_str("notify_content"), "last_response");
     /* llamacpp.port has a fixed default in the registry. */
     EXPECT_STR_EQ(config_str("providers.llamacpp.port"), "8080");
     /* File overrides the default. */

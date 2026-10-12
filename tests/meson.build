@@ -154,6 +154,7 @@ endforeach
 # prefix selects the group (`meson test 'e2e/*'`).
 e2e_scenarios = [
     'oneshot',
+    'repl_editor',
     'repl_interrupt',
     'repl_smoke',
 ]

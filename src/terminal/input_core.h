@@ -86,6 +86,9 @@ struct input {
     char *(*paste_filter)(const char *text, void *user);
     void *paste_filter_user;
 
+    char *(*editor_context)(void *user);
+    void *editor_context_user;
+
     /* Owned; non-NULL lets Enter submit an empty buffer, which shows it as ghost text. */
     char *empty_placeholder;
 

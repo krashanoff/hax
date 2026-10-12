@@ -368,6 +368,33 @@ static char *filter_paste(const char *text, void *user)
 
 /* View callbacks borrow agent_run's live state so vector growth and provider replacement cannot
  * stale captured pointers. */
+static char *editor_transcript_context(void *user)
+{
+    const struct agent_state *state = user;
+    const struct agent_session *session = state->session;
+    size_t first = session->n_items;
+    int entries = 0;
+    while (first > 0 && entries < 5) {
+        first--;
+        if (session->items[first].kind != ITEM_TURN_BOUNDARY &&
+            session->items[first].kind != ITEM_TURN_USAGE)
+            entries++;
+    }
+    if (!entries)
+        return NULL;
+
+    char *text = NULL;
+    size_t length = 0;
+    FILE *stream = open_memstream(&text, &length);
+    if (!stream)
+        return NULL;
+    int turn_number = 0;
+    transcript_render_items(stream, TRANSCRIPT_RENDER_PLAIN, session->items, session->n_items,
+                            first, &turn_number);
+    fclose(stream);
+    return text;
+}
+
 static void show_transcript_cb(void *user)
 {
     const struct agent_state *state = user;
@@ -1167,6 +1194,7 @@ int agent_run(struct provider **provider_io, const struct hax_opts *options)
     input_set_hint(input, slash_hint_cb, NULL);
     input_set_paste_hook(input, capture_paste, NULL);
     input_set_paste_filter(input, filter_paste, NULL);
+    input_set_editor_context(input, editor_transcript_context, &state);
     /* Raw mode clears IEXTEN, so Ctrl-O does not trigger BSD/macOS VDISCARD. */
     input_bind_modal_key(input, INPUT_KEY_CTRL('O'), show_history_cb, &state);
     input_bind_modal_key(input, INPUT_KEY_CTRL('T'), show_transcript_cb, &state);

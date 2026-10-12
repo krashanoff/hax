@@ -73,6 +73,10 @@ void input_set_paste_filter(struct input *in, char *(*fn)(const char *text, void
  * One-shot; NULL or "" clears it, and non-tty reads discard it. */
 void input_set_preseed(struct input *in, const char *text);
 
+/* Provide malloc'd plain-text context for Ctrl-G. It is shown as comments above the draft
+ * and removed before the edited prompt enters the input buffer. NULL disables the hook. */
+void input_set_editor_context(struct input *in, char *(*fn)(void *user), void *user);
+
 /* A non-NULL `placeholder` makes Enter on an empty buffer return "" instead of doing nothing,
  * and the empty buffer shows it as ghost text. An empty submit erases the prompt row and leaves
  * the cursor at its start, as before the call. NULL restores the default; the text is copied. */

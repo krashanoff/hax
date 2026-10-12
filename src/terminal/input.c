@@ -659,6 +659,25 @@ static void erase_edit_area(struct input *in)
 
 /* ---------------- $EDITOR escape ---------------- */
 
+static const char editor_context_end[] =
+    "# --- end recent transcript; write your prompt below ---\n";
+
+static int write_editor_context(int fd, const char *text)
+{
+    if (!text || !*text)
+        return 0;
+    if (fd_write_all(fd, "# Recent transcript (not sent):\n# ",
+                     sizeof("# Recent transcript (not sent):\n# ") - 1) < 0)
+        return -1;
+    for (const char *p = text; *p; p++) {
+        if (fd_write_all(fd, p, 1) < 0 || (*p == '\n' && p[1] && fd_write_all(fd, "# ", 2) < 0))
+            return -1;
+    }
+    if (text[strlen(text) - 1] != '\n' && fd_write_all(fd, "\n", 1) < 0)
+        return -1;
+    return fd_write_all(fd, editor_context_end, sizeof(editor_context_end) - 1);
+}
+
 /* Probe candidates because minimal installs ship few or no editors; `editor` is Debian's
  * alternatives name. A broken $VISUAL/$EDITOR is an error, not a fallback trigger — silently
  * substituting would hide it. Returns NULL after reporting why. */
@@ -706,7 +725,13 @@ static void open_editor(struct input *in)
     int fd = mkstemp(path);
     if (fd < 0)
         goto reenter;
-    if (in->len > 0 && fd_write_all(fd, in->buf, in->len) < 0) {
+    char *context = in->editor_context ? in->editor_context(in->editor_context_user) : NULL;
+    int has_context = context && *context;
+    int write_failed = has_context && write_editor_context(fd, context) < 0;
+    free(context);
+    if (!write_failed && in->len > 0)
+        write_failed = fd_write_all(fd, in->buf, in->len) < 0;
+    if (write_failed) {
         close(fd);
         unlink(path);
         goto reenter;
@@ -735,7 +760,14 @@ static void open_editor(struct input *in)
         /* Drop one trailing newline — most editors append one automatically. */
         if (n > 0 && content[n - 1] == '\n')
             content[--n] = '\0';
-        input_core_set_buffer(in, content);
+        char *prompt = content;
+        if (has_context) {
+            char *marker = strstr(content, editor_context_end);
+            /* Without the delimiter, do not risk sending transcript comments as a prompt. */
+            prompt = marker ? marker + sizeof(editor_context_end) - 1 : NULL;
+        }
+        if (prompt)
+            input_core_set_buffer(in, prompt);
         free(content);
     }
 
@@ -1354,6 +1386,12 @@ void input_set_empty_submit(struct input *in, const char *placeholder)
 {
     free(in->empty_placeholder);
     in->empty_placeholder = placeholder ? xstrdup(placeholder) : NULL;
+}
+
+void input_set_editor_context(struct input *in, char *(*fn)(void *user), void *user)
+{
+    in->editor_context = fn;
+    in->editor_context_user = user;
 }
 
 void input_set_preseed(struct input *in, const char *text)

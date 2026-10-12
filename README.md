@@ -2,7 +2,7 @@
 
 # hax
 
-**A minimalist, terminal-native coding agent written in C.**
+**A minimalist, terminal-native coding agent written in C and Rust.**
 
 <img src="./docs/screenshot.png" width="720"
      alt="hax answering a question about its own source using a local llama.cpp model">
@@ -11,7 +11,7 @@
 
 ## Key features
 
-- **Lightweight by design** — A single native C binary with a small dependency set.
+- **Lightweight by design** — A single native binary with a small dependency set.
   Starts instantly and uses only a few MB of memory, leaving more RAM for local models.
 - **Local models are first-class** — Start `llama-server -m [model].gguf`, then
   `hax --provider llama.cpp`, and hax auto-discovers the model and runtime capabilities.
@@ -68,9 +68,9 @@ make install              # optional; may prompt for sudo
 ```
 
 `scripts/install_deps.sh` installs the build dependencies — a C compiler, `libcurl`,
-`meson`, `ninja`, and `pkg-config` — plus `fzf`, which hax uses for `@file` completion when
-available. Meson downloads jansson on first setup and links it statically. On other platforms,
-install those packages by hand and run `make`.
+`meson`, `ninja`, `pkg-config`, and the Rust toolchain (`cargo` and `rustc`) — plus `fzf`,
+which hax uses for `@file` completion when available. Meson downloads jansson on first setup and
+links it statically. On other platforms, install those packages by hand and run `make`.
 
 For hacking on hax, `make symlink` links the freshly built binary into `~/.local/bin` so it
 stays on `PATH` across rebuilds. `make tests` additionally needs `tmux`, which drives the

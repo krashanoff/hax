@@ -1,3 +1,6 @@
+# Rust local build artifacts
+/rust/target/
+
 # Meson build directories (any build* dir at repo root)
 /build*/
 

@@ -189,13 +189,11 @@ sources = files(
     'src/terminal/vt_resolve.c',
     'src/terminal/width.c',
 
-    'src/text/base64.c',
     'src/text/diff.c',
     'src/text/fmt.c',
     'src/text/frontmatter.c',
     'src/text/placeholder.c',
     'src/text/sha256.c',
-    'src/text/shell_quote.c',
     'src/text/url.c',
     'src/text/utf8.c',
     'src/text/utf8_sanitize.c',
@@ -225,6 +223,16 @@ sources = files(
     'src/transport/sse.c',
 )
 
+cargo = find_program('cargo')
+rust_text = custom_target('rust_text',
+    input: files('rust/Cargo.toml', 'rust/src/lib.rs'),
+    output: 'libhax_text.a',
+    command: ['sh', '-c',
+        '"$1" build --offline --release --manifest-path "$2" --target-dir "$3" && cp "$3/release/libhax_text.a" "$4"',
+        'sh', cargo, meson.project_source_root() / 'rust/Cargo.toml',
+        meson.project_build_root() / 'rust-target', '@OUTPUT@'],
+)
+
 # One archive shared by the executable and every test. Static-archive linking
 # is lazy: each consumer pulls only the objects it transitively references, so
 # tests get exactly the closure they need without hand-listing sources. The
@@ -245,7 +253,7 @@ hax_lib = static_library('hax_lib',
 # (static libraries propagate their link deps), so re-adding them would make
 # every link emit `ld: warning: ignoring duplicate libraries`.
 hax_dep = declare_dependency(
-    link_with: hax_lib,
+    link_with: [hax_lib, rust_text],
     dependencies: [
         libcurl.partial_dependency(compile_args: true, includes: true),
         jansson.partial_dependency(compile_args: true, includes: true).as_system('system'),

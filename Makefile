@@ -10,6 +10,7 @@ all:
 	@BUILD_DIR=$(BUILD_DIR) scripts/check.sh build
 
 tests:
+	@cargo test --offline --manifest-path rust/Cargo.toml --quiet
 	@BUILD_DIR=$(BUILD_DIR) scripts/check.sh test
 
 lint:

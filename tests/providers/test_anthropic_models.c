@@ -1,4 +1,5 @@
 /* SPDX-License-Identifier: MIT */
+#include <jansson.h>
 #include <stdatomic.h>
 #include <stdio.h>
 #include <stdlib.h>
@@ -216,6 +217,44 @@ static void test_first_party_pins_endpoint(void)
     config_set_override("providers.anthropic.base_url", NULL);
 }
 
+static void test_paginated_entry_limit(void)
+{
+    json_t *data = json_array();
+    for (size_t i = 0; i < MODEL_LIST_MAX_ENTRIES; i++)
+        json_array_append_new(data, json_pack("{s:s}", "id", "m"));
+    json_t *page = json_pack("{s:o,s:b,s:s}", "data", data, "has_more", 1, "last_id", "first");
+    char *body = json_dumps(page, JSON_COMPACT);
+    json_decref(page);
+    struct loopback server = {0};
+    loopback_reply_ok(&server, 0, body);
+    free(body);
+    loopback_reply_ok(&server, 1, "{\"data\":[{\"id\":\"last\"}],\"has_more\":false}");
+    server.n_requests = 2;
+    int port = loopback_start(&server);
+    if (port < 0) {
+        loopback_stop(&server);
+        T_SKIP("cannot run a loopback server here");
+    }
+    char base_url[64];
+    snprintf(base_url, sizeof(base_url), "http://127.0.0.1:%d", port);
+    setenv("HAX_ANTHROPIC_BASE_URL", base_url, 1);
+    struct provider *provider = provider_construct(provider_find("anthropic-compatible"));
+    EXPECT(provider != NULL);
+    if (provider) {
+        struct model_info *models = NULL;
+        size_t n_models = 0;
+        char *error = NULL;
+        EXPECT(provider->list_models(provider, &models, &n_models, &error, NULL, NULL) == -1);
+        EXPECT(models == NULL);
+        EXPECT(n_models == 0);
+        EXPECT(error && strstr(error, "entry limit"));
+        model_info_free(models, n_models);
+        free(error);
+        provider->destroy(provider);
+    }
+    loopback_stop(&server);
+}
+
 int main(void)
 {
     setenv("HAX_ANTHROPIC_API_KEY", "test-key", 1);
@@ -226,6 +265,7 @@ int main(void)
     test_max_tokens_uses_model_limit();
     test_background_probe_publishes_metadata();
     test_follows_cursor();
+    test_paginated_entry_limit();
     test_repeated_cursor_page_is_discarded();
     test_missing_cursor_stops();
     T_REPORT();

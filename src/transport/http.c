@@ -350,7 +350,7 @@ static int buffered_request(const char *url, const char *const *headers, const c
     }
 
     struct buffered_request_state state = {
-        .max_bytes = max_bytes,
+        .max_bytes = max_bytes > 0 ? max_bytes : HTTP_RESPONSE_MAX_BYTES,
         .tick = {.callback = tick, .user = tick_user},
     };
 

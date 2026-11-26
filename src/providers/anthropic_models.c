@@ -179,6 +179,7 @@ int anthropic_list_models(struct provider *provider, struct model_info **models,
     struct model_info *available = NULL;
     size_t n_available = 0;
     size_t capacity = 0;
+    size_t entries_seen = 0;
     char *after_id = NULL;
     int saw_entry = 0;
 
@@ -202,6 +203,13 @@ int anthropic_list_models(struct provider *provider, struct model_info **models,
             break;
         }
 
+        size_t page_entries = json_array_size(data);
+        if (page_entries > MODEL_LIST_MAX_ENTRIES - entries_seen) {
+            json_decref(page);
+            *error = xasprintf("model listing exceeds the %d-entry limit", MODEL_LIST_MAX_ENTRIES);
+            goto fail;
+        }
+        entries_seen += page_entries;
         append_models(data, &available, &n_available, &capacity, &saw_entry);
         int has_more = json_is_true(json_object_get(page, "has_more"));
         free(after_id);

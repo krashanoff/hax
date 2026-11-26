@@ -7,6 +7,7 @@
 
 #include "harness.h"
 #include "loopback.h"
+#include "xalloc.h"
 #include "transport/http.h"
 
 static void make_url(char *url, size_t size, int port)
@@ -86,6 +87,50 @@ static void test_response_size_limit(void)
     EXPECT(result == -1);
     EXPECT(status == 200);
     EXPECT(body == NULL);
+}
+
+static void check_default_response_limit(size_t length, long limit, int post, int expected)
+{
+    char *payload = xmalloc(length + 1);
+    memset(payload, 'x', length);
+    payload[length] = '\0';
+    /* No Content-Length: enforce the limit on received bytes, not just on the header. */
+    char *reply = xasprintf("HTTP/1.1 200 OK\r\nConnection: close\r\n\r\n%s", payload);
+    free(payload);
+    struct loopback server = {.response = reply};
+    int port = loopback_start(&server);
+    EXPECT(port > 0);
+    if (port <= 0) {
+        free(reply);
+        return;
+    }
+
+    char url[64];
+    make_url(url, sizeof(url), port);
+    char *body = NULL;
+    int result = post ? http_post_json(url, NULL, "{}", 2, 5, limit, NULL, NULL, &body)
+                      : http_get(url, NULL, 5, limit, NULL, NULL, &body, NULL);
+    loopback_stop(&server);
+    free(reply);
+
+    EXPECT(result == expected);
+    if (expected == 0) {
+        EXPECT(body != NULL);
+        if (body)
+            EXPECT(strlen(body) == length);
+    } else {
+        EXPECT(body == NULL);
+    }
+    free(body);
+}
+
+static void test_default_response_limit(void)
+{
+    check_default_response_limit(HTTP_RESPONSE_MAX_BYTES, 0, 0, 0);
+    check_default_response_limit(HTTP_RESPONSE_MAX_BYTES + 1, 0, 0, -1);
+    check_default_response_limit(HTTP_RESPONSE_MAX_BYTES + 1, -1, 0, -1);
+    check_default_response_limit(HTTP_RESPONSE_MAX_BYTES + 1, 0, 1, -1);
+    check_default_response_limit(HTTP_RESPONSE_MAX_BYTES + 1, HTTP_RESPONSE_MAX_BYTES + 1, 0, 0);
 }
 
 struct event_capture {
@@ -263,6 +308,7 @@ int main(void)
     test_post_exposes_error_status();
     test_post_empty_body_is_null();
     test_response_size_limit();
+    test_default_response_limit();
     test_sse_success();
     test_sse_error_response();
     test_sse_cancellation();

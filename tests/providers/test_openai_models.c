@@ -114,9 +114,42 @@ static void test_unrecognized_shape_reports_error(void)
     free(error);
 }
 
+static void test_model_entry_limit(void)
+{
+    for (size_t entries = MODEL_LIST_MAX_ENTRIES; entries <= MODEL_LIST_MAX_ENTRIES + 1;
+         entries++) {
+        json_t *data = json_array();
+        for (size_t i = 0; i < entries; i++)
+            json_array_append_new(data, json_pack("{s:s}", "id", "m"));
+        json_t *root = json_pack("{s:o}", "data", data);
+        char *response = json_dumps(root, JSON_COMPACT);
+        json_decref(root);
+        struct model_info *models = NULL;
+        size_t n_models = 0;
+        char *error = NULL;
+        int result = list_from_server(response, &models, &n_models, &error);
+        free(response);
+        if (result == -2)
+            T_SKIP("cannot run a loopback server here");
+        if (entries == MODEL_LIST_MAX_ENTRIES) {
+            EXPECT(result == 0);
+            EXPECT(n_models == entries);
+            EXPECT(error == NULL);
+        } else {
+            EXPECT(result == -1);
+            EXPECT(models == NULL);
+            EXPECT(n_models == 0);
+            EXPECT(error && strstr(error, "entry limit"));
+        }
+        model_info_free(models, n_models);
+        free(error);
+    }
+}
+
 int main(void)
 {
     test_lists_flat_models();
+    test_model_entry_limit();
     test_null_data_is_empty_success();
     test_unrecognized_shape_reports_error();
     T_REPORT();

@@ -8,6 +8,9 @@
 #include "effort.h"
 #include "transport/http.h"
 
+/* Bound model-list allocations and aggregate paginated listings. */
+#define MODEL_LIST_MAX_ENTRIES 8192
+
 /* Flat, provider-independent conversation records. Adapters may group adjacent records when their
  * wire format requires compound assistant messages or tool-result blocks. */
 enum item_kind {

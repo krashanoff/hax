@@ -51,6 +51,9 @@ notes (see [docs/releasing.md](docs/releasing.md)).
 
 ### Fixed
 
+- Buffered HTTP responses default to an 8 MiB decoded-size limit, bounding metadata, usage,
+  and authentication response memory. Model listings reject more than 8192 entries, including
+  entries accumulated across pages.
 - Theme colors are more readable and consistent, including quiet roles in the `light` theme and
   the `rose` tint in the `dark` theme.
 - `config.json` and `state.json` are now written with a trailing newline, matching `auth.json`

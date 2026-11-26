@@ -339,6 +339,12 @@ int codex_list_models(struct provider *provider, struct model_info **models_out,
     }
 
     size_t entry_count = json_array_size(models);
+    if (entry_count > MODEL_LIST_MAX_ENTRIES) {
+        json_decref(root);
+        *error =
+            xasprintf("codex model catalog exceeds the %d-entry limit", MODEL_LIST_MAX_ENTRIES);
+        return -1;
+    }
     struct model_info *listed_models =
         entry_count ? xmalloc(entry_count * sizeof(*listed_models)) : NULL;
     size_t listed_count = 0;

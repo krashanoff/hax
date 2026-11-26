@@ -59,6 +59,12 @@ int openai_list_models(struct provider *provider, struct model_info **models, si
 
     http_parse_model_cb parse_model = http_provider_parse_model(provider);
     size_t n_entries = json_array_size(data);
+    if (n_entries > MODEL_LIST_MAX_ENTRIES) {
+        json_decref(root);
+        *error = xasprintf("%s /models response exceeds the %d-entry limit", provider_name,
+                           MODEL_LIST_MAX_ENTRIES);
+        return -1;
+    }
     struct model_info *available = xmalloc(n_entries * sizeof(*available));
     size_t n_available = 0;
     for (size_t i = 0; i < n_entries; i++) {
